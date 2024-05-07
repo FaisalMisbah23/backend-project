@@ -2,7 +2,7 @@ import mongoose, {Schema}  from 'mongoose'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 
-const userSchema = new mongooose.Schema({
+const userSchema = new mongoose.Schema({
     watchHistrry : [
         {
             type : mongoose.Types.ObjectId,
@@ -38,7 +38,6 @@ const userSchema = new mongooose.Schema({
     },
     refreshToken : {
         type : String ,
-        required : true
     },
 
 },{timeStamps : true})
@@ -48,7 +47,7 @@ userSchema.pre('save', async function(next) {
     // as the bcrypt can takes time so we use async-await
     // check if modified then again save passwork otherwise bcrypt everytime change passoword
     if(this.isModified('password')){
-        this.password = bcrypt.hash(this.password, 8)
+        this.password = await bcrypt.hash(this.password, 8)
         next()
     } else {
         return next()
@@ -56,28 +55,36 @@ userSchema.pre('save', async function(next) {
    
 } )
 
-userSchema.methods.isPasswordCorrect = async function (password) {
-    await bcrypt.compare(password,this.password)
+userSchema.methods.isPasswordCorrect = async function(password){
+    return await bcrypt.compare(password, this.password)
 }
 
-userSchema.methods.genreteAcessToken = function() {
-    return jwt.sign({
-        _id:this._id,
-        email:this.email,
-        username:this.username,
-        fullName:this.fullName
-},
-    Process.env.Access_Token_Secret,
-    {expiresIn:Access_Token_Expiry}
-)
+
+userSchema.methods.generateAccessToken = function() {
+    return jwt.sign(
+        {
+            _id: this._id,
+            email: this.email,
+            username: this.username,
+            fullName: this.fullName
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        {
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+        }
+    )
 }
 
-userSchema.methods.genereteRefreshToken = function() {
-    return jwt.sign({
-        _id:this._id,
-    },
-    Refresh_Token_Secret,
-    {expiresIn:Refresh_Token_Expiry}
+userSchema.methods.generateRefreshToken = function() {
+    return jwt.sign(
+        {
+            _id: this._id,
+            
+        },
+        process.env.REFRESH_TOKEN_SECRET,
+        {
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+        }
     )
 }
 
